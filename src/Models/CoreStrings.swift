@@ -1,5 +1,5 @@
 //
-//  Strings.swift
+//  CoreStrings.swift
 //  Peekr
 //
 //  Created by Mounir Ybanez on 8/27/19.
@@ -8,7 +8,7 @@
 
 import Foundation
 
-public enum Strings {
+public enum CoreStrings {
     
     static let userNotCreated = "User is not created".localized()
 

@@ -16,10 +16,10 @@ public func signInWith(email: String, password: String, completion: @escaping (R
         }
         
         if result?.user == nil {
-            completion(.notOkay(coreError(message: Strings.userNotCreated)))
+            completion(.notOkay(coreError(message: CoreStrings.userNotCreated)))
             return
         }
         
-        completion(.okay(Strings.ok))
+        completion(.okay(CoreStrings.ok))
     }
 }
