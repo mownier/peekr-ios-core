@@ -1,0 +1,10 @@
+/* 
+  CoreLocalizableStrings.strings
+  Peekr
+
+  Created by Mounir Ybanez on 8/27/19.
+  Copyright © 2019 Nir. All rights reserved.
+*/
+
+"User is not created" = "User is not created";
+"OK" = "OK";
