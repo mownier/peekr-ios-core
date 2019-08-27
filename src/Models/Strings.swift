@@ -6,9 +6,18 @@
 //  Copyright © 2019 Nir. All rights reserved.
 //
 
+import Foundation
+
 public enum Strings {
     
-    static let userNotCreated = "user is not created"
+    static let userNotCreated = "User is not created".localized()
 
-    public static let ok = "OK"
+    public static let ok = "OK".localized()
+}
+
+extension String {
+    
+    public func localized(comment: String = "") -> String {
+        return NSLocalizedString(self, comment: comment)
+    }
 }
