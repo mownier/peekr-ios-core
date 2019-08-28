@@ -11,6 +11,7 @@ import Foundation
 public enum CoreStrings {
     
     static let userNotCreated = "User is not created".localized()
+    static let broadcastInfoKey = "broadcast.info.key"
 
     public static let ok = "OK".localized()
 }
