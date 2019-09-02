@@ -19,11 +19,23 @@ public func broadcastWith<T>(name: Notification.Name, info: T) -> Bool {
 
 public func registerBroadcastObserverWith<T, R>(name: Notification.Name, action: @escaping (T) -> R) -> NSObjectProtocol? {
     return broadcastCenter.addObserver(forName: name, object: nil, queue: nil) { notif in
-        guard let info = notif.userInfo?[CoreStrings.broadcastInfoKey] as? T else {
+        let info = notif.userInfo?[CoreStrings.broadcastInfoKey] as? T
+        if let data = info {
+            let _ = action(data)
             return
         }
-        let _ = action(info)
+        
+        if T.self == Void.self {
+            let data: Void
+            let _ = action(data as! T)
+        }
     }
+}
+
+@discardableResult
+public func broadcastWith(name: Notification.Name) -> Bool {
+    broadcastCenter.post(name: name, object: nil, userInfo: nil)
+    return true
 }
 
 @discardableResult
