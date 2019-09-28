@@ -96,8 +96,7 @@ public func uploadMP4Video(with url: URL?, track: @escaping (Progress?) -> Void,
     }
     
     let data: (URL) -> Data = { url -> Data in
-        return UIImage(contentsOfFile: url.path)!
-            .jpegData(compressionQuality: 0.9)!
+        return try! Data(contentsOf: url)
     }
     
     uploadFile(
