@@ -117,7 +117,7 @@ public func uploadMP4Video(with url: URL?, track: @escaping (Progress?) -> Void,
                 let height: Double = metadata["height"] as? Double ?? 0.0
                 let width: Double = metadata["width"] as? Double ?? 0.0
                 let db = Firestore.firestore()
-                let collection = db.collection("images")
+                let collection = db.collection("videos")
                 let id = collection.document().documentID
                 let data: [String: Any] = [
                     "id" : id,
@@ -165,7 +165,8 @@ func uploadFile(
     let storageMetadata = metadata(fileURL)
     
     let storageRef = Storage.storage().reference()
-    storageRef.child(storageChildPath).putData(
+    let childRef = storageRef.child(storageChildPath)
+    childRef.putData(
         data(fileURL),
         metadata: storageMetadata,
         completion: { metadata, error in
@@ -174,7 +175,7 @@ func uploadFile(
                 return
             }
             
-            storageRef.downloadURL(completion: { downloadURL, error in
+            childRef.downloadURL(completion: { downloadURL, error in
                 guard error == nil else {
                     completion(.notOkay(coreError(message: error!.localizedDescription)))
                     return
