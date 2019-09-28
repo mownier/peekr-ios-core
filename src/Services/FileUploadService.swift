@@ -9,6 +9,7 @@
 import FirebaseAuth
 import FirebaseStorage
 import FirebaseFirestore
+import AVFoundation
 
 public func uploadJPEGImage(with url: URL?, track: @escaping (Progress?) -> Void, completion: @escaping (Result<ImageFile>) -> Void) {
     let childPath: (String) -> String = { userID -> String in
@@ -73,8 +74,75 @@ public func uploadJPEGImage(with url: URL?, track: @escaping (Progress?) -> Void
     })
 }
 
-public func uploadMP4Video(with url: URL?, track: @escaping (Progress?) -> Void, completion: @escaping (Bool) -> Void) {
-    // TODO: Impleement upload video
+public func uploadMP4Video(with url: URL?, track: @escaping (Progress?) -> Void, completion: @escaping (Result<VideoFile>) -> Void) {
+    let childPath: (String) -> String = { userID -> String in
+        let key = Date.timeIntervalSinceReferenceDate * 1000
+        return "\(userID)/vidoes/\(key).mp4"
+    }
+    
+    let metadata: (URL) -> StorageMetadata? = { url -> StorageMetadata? in
+        let size: CGSize
+        
+        if let track = AVAsset(url: url).tracks(withMediaType: AVMediaType.video).first {
+            size = track.naturalSize.applying(track.preferredTransform)
+            
+        } else {
+            size = .zero
+        }
+        
+        let metadata = StorageMetadata(dictionary: ["height": size.height, "width": size.width])
+        metadata?.contentType = "video/mp4"
+        return metadata
+    }
+    
+    let data: (URL) -> Data = { url -> Data in
+        return UIImage(contentsOfFile: url.path)!
+            .jpegData(compressionQuality: 0.9)!
+    }
+    
+    uploadFile(
+        with: url,
+        childPath: childPath,
+        metadata: metadata,
+        data: data,
+        track: track,
+        completion: { result in
+            switch result {
+            case let .notOkay(error):
+                completion(.notOkay(error))
+                
+            case let .okay(triple):
+                let downloadURLString = triple.first
+                let metadata = triple.second?.dictionaryRepresentation() ?? [:]
+                let userID = triple.third
+                let height: Double = metadata["height"] as? Double ?? 0.0
+                let width: Double = metadata["width"] as? Double ?? 0.0
+                let db = Firestore.firestore()
+                let collection = db.collection("images")
+                let id = collection.document().documentID
+                let data: [String: Any] = [
+                    "id" : id,
+                    "user_id" : userID,
+                    "download_url" : downloadURLString,
+                    "height" : height,
+                    "width" : width,
+                    ]
+                collection.document(id).setData(data, completion: { error in
+                    guard error == nil else {
+                        completion(.notOkay(coreError(message: error!.localizedDescription)))
+                        return
+                    }
+                    
+                    let videoFile = VideoFile(
+                        id: id,
+                        height: height,
+                        width: width,
+                        downloadURLString: downloadURLString
+                    )
+                    completion(.okay(videoFile))
+                })
+            }
+    })
 }
 
 func uploadFile(
