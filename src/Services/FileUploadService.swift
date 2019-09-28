@@ -17,14 +17,14 @@ public func uploadJPEGImage(with url: URL?, track: @escaping (Progress?) -> Void
     }
     
     let metadata: (URL) -> StorageMetadata? = { url -> StorageMetadata? in
-        // TODO: Get height and width
-        let metadata = StorageMetadata(dictionary: ["height": 100.0, "width": 100.0])
+        let size = UIImage(contentsOfFile: url.path)!.size
+        let metadata = StorageMetadata(dictionary: ["height": size.height, "width": size.width])
         metadata?.contentType = "image/jpeg"
         return metadata
     }
     
     let data: (URL) -> Data = { url -> Data in
-        return UIImage(contentsOfFile:url.path)!
+        return UIImage(contentsOfFile: url.path)!
             .jpegData(compressionQuality: 0.9)!
     }
     
