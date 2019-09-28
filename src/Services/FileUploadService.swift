@@ -19,8 +19,9 @@ public func uploadJPEGImage(with url: URL?, track: @escaping (Progress?) -> Void
     
     let metadata: (URL) -> StorageMetadata? = { url -> StorageMetadata? in
         let size = UIImage(contentsOfFile: url.path)!.size
-        let metadata = StorageMetadata(dictionary: ["height": size.height, "width": size.width])
-        metadata?.contentType = "image/jpeg"
+        let metadata = StorageMetadata()
+        metadata.customMetadata = ["height": "\(size.height)", "width": "\(size.width)"]
+        metadata.contentType = "image/jpeg"
         return metadata
     }
     
@@ -42,10 +43,10 @@ public func uploadJPEGImage(with url: URL?, track: @escaping (Progress?) -> Void
             
             case let .okay(triple):
                 let downloadURLString = triple.first
-                let metadata = triple.second?.dictionaryRepresentation() ?? [:]
+                let metadata = triple.second?.customMetadata ?? [:]
                 let userID = triple.third
-                let height: Double = metadata["height"] as? Double ?? 0.0
-                let width: Double = metadata["width"] as? Double ?? 0.0
+                let height: Double = Double(metadata["height"] ?? "") ?? 0.0
+                let width: Double = Double(metadata["width"] ?? "") ?? 0.0
                 let db = Firestore.firestore()
                 let collection = db.collection("images")
                 let id = collection.document().documentID
@@ -90,8 +91,9 @@ public func uploadMP4Video(with url: URL?, track: @escaping (Progress?) -> Void,
             size = .zero
         }
         
-        let metadata = StorageMetadata(dictionary: ["height": size.height, "width": size.width])
-        metadata?.contentType = "video/mp4"
+        let metadata = StorageMetadata()
+        metadata.customMetadata = ["height": "\(size.height)", "width": "\(size.width)"]
+        metadata.contentType = "video/mp4"
         return metadata
     }
     
@@ -112,10 +114,10 @@ public func uploadMP4Video(with url: URL?, track: @escaping (Progress?) -> Void,
                 
             case let .okay(triple):
                 let downloadURLString = triple.first
-                let metadata = triple.second?.dictionaryRepresentation() ?? [:]
+                let metadata = triple.second?.customMetadata ?? [:]
                 let userID = triple.third
-                let height: Double = metadata["height"] as? Double ?? 0.0
-                let width: Double = metadata["width"] as? Double ?? 0.0
+                let height: Double = Double(metadata["height"] ?? "") ?? 0.0
+                let width: Double = Double(metadata["width"] ?? "") ?? 0.0
                 let db = Firestore.firestore()
                 let collection = db.collection("videos")
                 let id = collection.document().documentID
