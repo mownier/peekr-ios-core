@@ -42,35 +42,50 @@ public func uploadJPEGImage(with url: URL?, track: @escaping (Progress?) -> Void
                 completion(.notOkay(error))
             
             case let .okay(triple):
+                let db = Firestore.firestore()
+                let batch = db.batch()
+                
                 let downloadURLString = triple.first
                 let metadata = triple.second?.customMetadata ?? [:]
                 let userID = triple.third
                 let height: Double = Double(metadata["height"] ?? "") ?? 0.0
                 let width: Double = Double(metadata["width"] ?? "") ?? 0.0
-                let db = Firestore.firestore()
-                let collection = db.collection("images")
-                let id = collection.document().documentID
-                let data: [String: Any] = [
-                    "id" : id,
+                
+                // Write to 'images' collection
+                let imagesCollection = db.collection("images")
+                let imageDocID = imagesCollection.document().documentID
+                let imageDocData: [String: Any] = [
+                    "id" : imageDocID,
                     "user_id" : userID,
                     "download_url" : downloadURLString,
                     "height" : height,
                     "width" : width,
                 ]
-                collection.document(id).setData(data, completion: { error in
+                let imageDoc = imagesCollection.document(imageDocID)
+                batch.setData(imageDocData, forDocument: imageDoc)
+                
+                // Write to 'user_images' collection
+                let userImagesCollection = db.collection("user_images")
+                let userImageDoc = userImagesCollection.document(userID)
+                let userImageDocData: [String: Any] = [
+                    imageDocID : true,
+                ]
+                batch.setData(userImageDocData, forDocument: userImageDoc, merge: true)
+                
+                batch.commit { error in
                     guard error == nil else {
                         completion(.notOkay(coreError(message: error!.localizedDescription)))
                         return
                     }
                     
                     let imageFile = ImageFile(
-                        id: id,
+                        id: imageDocID,
                         height: height,
                         width: width,
                         downloadURLString: downloadURLString
                     )
                     completion(.okay(imageFile))
-                })
+                }
             }
     })
 }
@@ -113,35 +128,50 @@ public func uploadMP4Video(with url: URL?, track: @escaping (Progress?) -> Void,
                 completion(.notOkay(error))
                 
             case let .okay(triple):
+                let db = Firestore.firestore()
+                let batch = db.batch()
+                
                 let downloadURLString = triple.first
                 let metadata = triple.second?.customMetadata ?? [:]
                 let userID = triple.third
                 let height: Double = Double(metadata["height"] ?? "") ?? 0.0
                 let width: Double = Double(metadata["width"] ?? "") ?? 0.0
-                let db = Firestore.firestore()
+                
+                // Write to 'videos' collection
                 let collection = db.collection("videos")
-                let id = collection.document().documentID
-                let data: [String: Any] = [
-                    "id" : id,
+                let videoDocID = collection.document().documentID
+                let videoDocData: [String: Any] = [
+                    "id" : videoDocID,
                     "user_id" : userID,
                     "download_url" : downloadURLString,
                     "height" : height,
                     "width" : width,
                     ]
-                collection.document(id).setData(data, completion: { error in
+                let videoDoc = collection.document(videoDocID)
+                batch.setData(videoDocData, forDocument: videoDoc)
+                
+                // Write to 'user_videos' collection
+                let userVideosCollection = db.collection("user_videos")
+                let userVideoDoc = userVideosCollection.document(userID)
+                let userVideoDocData: [String: Any] = [
+                    videoDocID : true,
+                ]
+                batch.setData(userVideoDocData, forDocument: userVideoDoc, merge: true)
+                
+                batch.commit { error in
                     guard error == nil else {
                         completion(.notOkay(coreError(message: error!.localizedDescription)))
                         return
                     }
                     
                     let videoFile = VideoFile(
-                        id: id,
+                        id: videoDocID,
                         height: height,
                         width: width,
                         downloadURLString: downloadURLString
                     )
                     completion(.okay(videoFile))
-                })
+                }
             }
     })
 }
