@@ -50,7 +50,7 @@ public func uploadJPEGImage(with url: URL?, track: @escaping (Progress?) -> Void
                 let userID = triple.third
                 let height: Double = Double(metadata["height"] ?? "") ?? 0.0
                 let width: Double = Double(metadata["width"] ?? "") ?? 0.0
-                let uploaded_on = Timestamp(date: Date())
+                let uploadedOn = Timestamp(date: Date())
                 
                 // Write to 'images' collection
                 let imagesCollection = db.collection("images")
@@ -61,7 +61,7 @@ public func uploadJPEGImage(with url: URL?, track: @escaping (Progress?) -> Void
                     "download_url" : downloadURLString,
                     "height" : height,
                     "width" : width,
-                    "uploaded_on": uploaded_on,
+                    "uploaded_on": uploadedOn,
                 ]
                 let imageDoc = imagesCollection.document(imageDocID)
                 batch.setData(imageDocData, forDocument: imageDoc)
@@ -70,7 +70,7 @@ public func uploadJPEGImage(with url: URL?, track: @escaping (Progress?) -> Void
                 let userImagesCollection = db.collection("user_images")
                 let userImageDoc = userImagesCollection.document(userID)
                 let userImageDocData: [String: Any] = [
-                    imageDocID : ["uploaded_on": uploaded_on],
+                    imageDocID : ["uploaded_on": uploadedOn],
                 ]
                 batch.setData(userImageDocData, forDocument: userImageDoc, merge: true)
                 
@@ -84,7 +84,8 @@ public func uploadJPEGImage(with url: URL?, track: @escaping (Progress?) -> Void
                         id: imageDocID,
                         height: height,
                         width: width,
-                        downloadURLString: downloadURLString
+                        downloadURLString: downloadURLString,
+                        uploadedOn: uploadedOn.dateValue()
                     )
                     completion(.okay(imageFile))
                 }
@@ -138,7 +139,7 @@ public func uploadMP4Video(with url: URL?, track: @escaping (Progress?) -> Void,
                 let userID = triple.third
                 let height: Double = Double(metadata["height"] ?? "") ?? 0.0
                 let width: Double = Double(metadata["width"] ?? "") ?? 0.0
-                let uploaded_on = Timestamp(date: Date())
+                let uploadedOn = Timestamp(date: Date())
                 
                 // Write to 'videos' collection
                 let collection = db.collection("videos")
@@ -149,7 +150,7 @@ public func uploadMP4Video(with url: URL?, track: @escaping (Progress?) -> Void,
                     "download_url" : downloadURLString,
                     "height" : height,
                     "width" : width,
-                    "uploaded_on": uploaded_on,
+                    "uploaded_on": uploadedOn,
                     ]
                 let videoDoc = collection.document(videoDocID)
                 batch.setData(videoDocData, forDocument: videoDoc)
@@ -158,7 +159,7 @@ public func uploadMP4Video(with url: URL?, track: @escaping (Progress?) -> Void,
                 let userVideosCollection = db.collection("user_videos")
                 let userVideoDoc = userVideosCollection.document(userID)
                 let userVideoDocData: [String: Any] = [
-                    videoDocID: ["uploaded_on": uploaded_on],
+                    videoDocID: ["uploaded_on": uploadedOn],
                 ]
                 batch.setData(userVideoDocData, forDocument: userVideoDoc, merge: true)
                 
@@ -172,7 +173,8 @@ public func uploadMP4Video(with url: URL?, track: @escaping (Progress?) -> Void,
                         id: videoDocID,
                         height: height,
                         width: width,
-                        downloadURLString: downloadURLString
+                        downloadURLString: downloadURLString,
+                        uploadedOn: uploadedOn.dateValue()
                     )
                     completion(.okay(videoFile))
                 }
