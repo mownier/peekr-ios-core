@@ -15,3 +15,15 @@ public struct ImageFile {
     public let width: Double
     public let downloadURLString: String
 }
+
+extension ImageFile {
+    
+    func toDictionary() -> [String : Any] {
+        return [
+            "id" : id,
+            "height" : height,
+            "width" : width,
+            "download_url" : downloadURLString
+        ]
+    }
+}
