@@ -66,14 +66,6 @@ public func uploadJPEGImage(with url: URL?, track: @escaping (Progress?) -> Void
                 let imageDoc = imagesCollection.document(imageDocID)
                 batch.setData(imageDocData, forDocument: imageDoc)
                 
-                // Write to 'user_images' collection
-                let userImagesCollection = db.collection("user_images")
-                let userImageDoc = userImagesCollection.document(userID)
-                let userImageDocData: [String: Any] = [
-                    imageDocID : ["uploaded_on": uploadedOn],
-                ]
-                batch.setData(userImageDocData, forDocument: userImageDoc, merge: true)
-                
                 batch.commit { error in
                     guard error == nil else {
                         completion(.notOkay(coreError(message: error!.localizedDescription)))
@@ -154,14 +146,6 @@ public func uploadMP4Video(with url: URL?, track: @escaping (Progress?) -> Void,
                     ]
                 let videoDoc = collection.document(videoDocID)
                 batch.setData(videoDocData, forDocument: videoDoc)
-                
-                // Write to 'user_videos' collection
-                let userVideosCollection = db.collection("user_videos")
-                let userVideoDoc = userVideosCollection.document(userID)
-                let userVideoDocData: [String: Any] = [
-                    videoDocID: ["uploaded_on": uploadedOn],
-                ]
-                batch.setData(userVideoDocData, forDocument: userVideoDoc, merge: true)
                 
                 batch.commit { error in
                     guard error == nil else {
