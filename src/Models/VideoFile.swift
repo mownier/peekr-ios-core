@@ -14,16 +14,21 @@ public struct VideoFile {
     public let height: Double
     public let width: Double
     public let downloadURLString: String
+    public let uploadedOn: Date?
 }
 
 extension VideoFile {
     
     func toDictionary() -> [String : Any] {
-        return [
+        var object: [String: Any] = [
             "id" : id,
             "height" : height,
             "width" : width,
             "download_url" : downloadURLString
         ]
+        if uploadedOn != nil {
+            object["uploaded_on"] = uploadedOn!
+        }
+        return object
     }
 }
