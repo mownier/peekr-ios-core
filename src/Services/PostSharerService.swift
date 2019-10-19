@@ -83,8 +83,8 @@ public func sharePost(
         "id" : postDocID,
         "authorID" : userID,
         "message" : message,
-        "thumbnail" : thumbnail.toDictionary(),
-        "video" : video.toDictionary(),
+        "thumbnail" : thumbnail.toDictionary().convertDateToFirebaseTimestamp(),
+        "video" : video.toDictionary().convertDateToFirebaseTimestamp(),
         "createdOn" : createdOn,
         "updatedOn" : updatedOn
     ]
@@ -94,10 +94,7 @@ public func sharePost(
     let authorPostsCollection = db.collection("author_posts")
     let authorPostDoc = authorPostsCollection.document(userID)
     let authorPostDocData: [String : Any] = [
-        postDocID : [
-            "createdOn" : createdOn,
-            "updatedOn" : updatedOn,
-        ]
+        postDocID: postDocData,
     ]
     batch.setData(authorPostDocData, forDocument: authorPostDoc, merge: true)
     
@@ -127,5 +124,20 @@ public func sharePost(
             createdOn: createdOn.dateValue(),
             updatedOn: updatedOn.dateValue()
         )))
+    }
+}
+
+extension Dictionary where Key == String, Value == Any {
+    
+    func convertDateToFirebaseTimestamp() -> [String: Any] {
+        return mapValues({ value -> Any in
+            if let dictionary = value as? [String: Any] {
+                return dictionary.convertDateToFirebaseTimestamp()
+            }
+            guard let date = value as? Date else {
+                return value
+            }
+            return Timestamp(date: date)
+        })
     }
 }
