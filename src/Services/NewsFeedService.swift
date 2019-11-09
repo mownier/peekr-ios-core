@@ -35,69 +35,69 @@ public func getNewsFeed(
             return
         }
         let postsCollection = db.collection("posts")
-        // TODO: Get all user info from 'users' collection
-        let users: Set<User> = Set([
-            [User(id: userID)],
-            snapshot?.data()?.map({ element -> User in
-                return User(id: element.key)
+        
+        let userIDs: Set<String> = Set([
+            [userID],
+            snapshot?.data()?.map({ element -> String in
+                return element.key
             }) ?? []
-        ].joined()
-            .map({ $0 })
-            .filter({ !$0.id.isEmpty }))
-        var postQueryCounter: Int = 0
-        var posts: [Post] = []
-        let postQueryResultBlock: (QuerySnapshot?, Error?) -> Bool = { snapshot, error in
-            postQueryCounter += 1
-            let isFinished = postQueryCounter >= users.count
-            guard error == nil else {
+        ].joined().map({ $0 }).filter({ !$0.isEmpty }))
+        getUsers(withIDs: userIDs, completion: { users in
+            var postQueryCounter: Int = 0
+            var posts: [Post] = []
+            let postQueryResultBlock: (QuerySnapshot?, Error?) -> Bool = { snapshot, error in
+                postQueryCounter += 1
+                let isFinished = postQueryCounter >= users.count
+                guard error == nil else {
+                    return isFinished
+                }
+                let postsData = snapshot?.documents.map({ $0.data() }) ?? []
+                posts.append(contentsOf:
+                    postsData
+                        .map({ $0.toPost() })
+                        .filter({ !$0.id.isEmpty && !$0.authorID.isEmpty })
+                )
                 return isFinished
             }
-            let postsData = snapshot?.documents.map({ $0.data() }) ?? []
-            posts.append(contentsOf:
-                postsData
-                    .map({ $0.toPost() })
-                    .filter({ !$0.id.isEmpty && !$0.authorID.isEmpty })
-            )
-            return isFinished
-        }
-        let maxDate = Date()
-        let minDate = Calendar.current.date(byAdding: Calendar.Component.day, value: -Int(previousDays), to: maxDate)!
-        let maxTimestamp = Timestamp(date: maxDate)
-        let minTimestamp = Timestamp(date: minDate)
-        users.forEach({ user in
-            // Query for the last 5 (default) days
-            postsCollection
-                .whereField("author_id", isEqualTo: user.id)
-                .whereField("created_on", isLessThanOrEqualTo: maxTimestamp)
-                .whereField("created_on", isGreaterThanOrEqualTo: minTimestamp)
-                .order(by: "created_on", descending: true)
-                .limit(to: Int(limit))
-                .getDocuments(completion: { snapshot, error in
-                    guard postQueryResultBlock(snapshot, error) else {
-                        return
-                    }
-                    let usersWithNoPosts = users.filter({ user -> Bool in
-                        return !posts.contains(where: { $0.authorID == user.id })
+            let maxDate = Date()
+            let minDate = Calendar.current.date(byAdding: Calendar.Component.day, value: -Int(previousDays), to: maxDate)!
+            let maxTimestamp = Timestamp(date: maxDate)
+            let minTimestamp = Timestamp(date: minDate)
+            users.forEach({ user in
+                // Query for the last 5 (default) days
+                postsCollection
+                    .whereField("author_id", isEqualTo: user.id)
+                    .whereField("created_on", isLessThanOrEqualTo: maxTimestamp)
+                    .whereField("created_on", isGreaterThanOrEqualTo: minTimestamp)
+                    .order(by: "created_on", descending: true)
+                    .limit(to: Int(limit))
+                    .getDocuments(completion: { snapshot, error in
+                        guard postQueryResultBlock(snapshot, error) else {
+                            return
+                        }
+                        let usersWithNoPosts = users.filter({ user -> Bool in
+                            return !posts.contains(where: { $0.authorID == user.id })
+                        })
+                        if usersWithNoPosts.count == 0 {
+                            completion(.okay(Pair(first: users, second: posts)))
+                            return
+                        }
+                        postQueryCounter -= usersWithNoPosts.count
+                        usersWithNoPosts.forEach({ user in
+                            // Query for the 50 (default) recent posts
+                            postsCollection
+                                .whereField("author_id", isEqualTo: user.id)
+                                .order(by: "created_on", descending: true)
+                                .limit(to: Int(limit))
+                                .getDocuments(completion: { snapshot, error in
+                                    guard postQueryResultBlock(snapshot, error) else {
+                                        return
+                                    }
+                                    completion(.okay(Pair(first: users, second: posts)))
+                                })
+                        })
                     })
-                    if usersWithNoPosts.count == 0 {
-                        completion(.okay(Pair(first: users, second: posts)))
-                        return
-                    }
-                    postQueryCounter -= usersWithNoPosts.count
-                    usersWithNoPosts.forEach({ user in
-                        // Query for the 50 (default) recent posts
-                        postsCollection
-                            .whereField("author_id", isEqualTo: user.id)
-                            .order(by: "created_on", descending: true)
-                            .limit(to: Int(limit))
-                            .getDocuments(completion: { snapshot, error in
-                                guard postQueryResultBlock(snapshot, error) else {
-                                    return
-                                }
-                                completion(.okay(Pair(first: users, second: posts)))
-                            })
-                    })
-                })
+            })
         })
     }
 }
