@@ -11,6 +11,14 @@ import Foundation
 public struct User: Hashable {
 
     public let id: String
+    public let username: String
+    public let avatar: String
+    
+    public init(id: String = "", username: String = "", avatar: String = "") {
+        self.id = id
+        self.username = username
+        self.avatar = avatar
+    }
     
     public static func ==(lhs: User, rhs: User) -> Bool {
         return lhs.id == rhs.id
