@@ -81,33 +81,14 @@ public func sharePost(
     let postDoc = postsCollection.document(postDocID)
     let postDocData: [String : Any] = [
         "id" : postDocID,
-        "authorID" : userID,
+        "author_id" : userID,
         "message" : message,
         "thumbnail" : thumbnail.toDictionary().convertDateToFirebaseTimestamp(),
         "video" : video.toDictionary().convertDateToFirebaseTimestamp(),
-        "createdOn" : createdOn,
-        "updatedOn" : updatedOn
+        "created_on" : createdOn,
+        "updated_on" : updatedOn
     ]
     batch.setData(postDocData, forDocument: postDoc)
-    
-    // Write to 'author_posts' collection
-    let authorPostsCollection = db.collection("author_posts")
-    let authorPostDoc = authorPostsCollection.document(userID)
-    let authorPostDocData: [String : Any] = [
-        postDocID: postDocData,
-    ]
-    batch.setData(authorPostDocData, forDocument: authorPostDoc, merge: true)
-    
-    // Write to 'all_posts' collection
-    let allPostsCollection = db.collection("all_posts")
-    let allPostsListDoc = allPostsCollection.document("list")
-    let allPostsListDocData: [String : Any] = [
-        postDocID : [
-            "createdOn" : createdOn,
-            "updatedOn" : updatedOn,
-        ]
-    ]
-    batch.setData(allPostsListDocData, forDocument: allPostsListDoc, merge: true)
     
     batch.commit { error in
         guard error == nil else {
