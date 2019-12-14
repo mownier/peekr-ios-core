@@ -65,6 +65,8 @@ func followOrUnfollowUser(
         return
     }
     let db = Firestore.firestore()
+    let followingCollection = db.collection("following")
+    let currentUserFollowingDoc = followingCollection.document(userID)
     let userPublicInfoCollection = db.collection("user_public_info")
     let targetUserDoc = userPublicInfoCollection.document(id)
     let currentUserDoc = userPublicInfoCollection.document(userID)
@@ -89,6 +91,12 @@ func followOrUnfollowUser(
             : oldFollowingCount + action.rawValue
         transaction.updateData(["follower_count": newFollowerCount], forDocument: targetUserDoc)
         transaction.updateData(["following_count": newFollowingCount], forDocument: currentUserDoc)
+        let actionUpdateValue: Any
+        switch action {
+        case .unfollow: actionUpdateValue = FieldValue.delete()
+        case .follow: actionUpdateValue = true
+        }
+        transaction.updateData([id: actionUpdateValue], forDocument: currentUserFollowingDoc)
         return nil
     }) { _, error in
         guard error == nil else {
