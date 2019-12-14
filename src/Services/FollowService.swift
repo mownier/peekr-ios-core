@@ -18,6 +18,33 @@ public func unfollowUser(withID id: String, completion: @escaping (Result<String
     followOrUnfollowUser(withID: id, action: .unfollow, completion: completion)
 }
 
+public func isFollowingUser(withID id: String, completion: @escaping (Result<Bool>) -> Void) {
+    guard let userID = Auth.auth().currentUser?.uid else {
+        completion(.notOkay(coreError(message: CoreStrings.userNotAuthenticated)))
+        return
+    }
+    guard !id.isEmpty else {
+        completion(.notOkay(coreError(message: CoreStrings.emptyUserID)))
+        return
+    }
+    let db = Firestore.firestore()
+    let followingCollection = db.collection("following")
+    let currentUserDoc = followingCollection.document(userID)
+    currentUserDoc.getDocument { snapshot, error in
+        guard error == nil else {
+            completion(.notOkay(error!))
+            return
+        }
+        guard let snapshot = snapshot,
+            snapshot.exists,
+            snapshot.get(id) != nil else {
+                completion(.okay(false))
+                return
+        }
+        completion(.okay(true))
+    }
+}
+
 enum FollowUnfollowAction: Int {
     
     case follow = 1
