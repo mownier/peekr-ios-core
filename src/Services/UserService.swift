@@ -43,6 +43,10 @@ public func getUsers(withIDs set: Set<String>, completion: @escaping (Set<User>)
     })
 }
 
+public func isMyID(_ id: String) -> Bool {
+    return Auth.auth().currentUser?.uid == id
+}
+
 extension Dictionary where Key == String, Value == Any {
     
     func toUser() -> User {
