@@ -12,6 +12,7 @@ public enum CoreStrings {
     
     static let userNotCreated = "User is not created".localized()
     static let userNotAuthenticated = "User is not authenticated".localized()
+    static let emptyUserID = "User ID is empty".localized()
     static let fileNotFound = "File not found".localized()
     static let downloadURLNotExisting = "Download URL does not exist".localized()
     static let broadcastInfoKey = "broadcast.info.key"
