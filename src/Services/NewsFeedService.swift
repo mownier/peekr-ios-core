@@ -27,21 +27,21 @@ public func getNewsFeed(
     }
     let db = Firestore.firestore()
     // Get all user ids that the signed in user is following
-    let userFollowingCollection = db.collection("following")
-    let userFollowingDoc = userFollowingCollection.document(userID)
-    userFollowingDoc.getDocument { snapshot, error in
+    let userFollowingCollection = db.collection("following/\(userID)/list")
+    userFollowingCollection.getDocuments { snapshot, error in
         guard error == nil else {
             completion(.notOkay(coreError(message: error!.localizedDescription)))
             return
         }
         let postsCollection = db.collection("posts")
-        
         let userIDs: Set<String> = Set([
             [userID],
-            snapshot?.data()?.map({ element -> String in
-                return element.key
-            }) ?? []
-        ].joined().map({ $0 }).filter({ !$0.isEmpty }))
+            snapshot?
+                .documents
+                .compactMap({ $0.data()["id"] as? String }) ?? []
+        ].joined()
+            .map({ $0 })
+            .filter({ !$0.isEmpty }))
         getUsers(withIDs: userIDs, completion: { users in
             var postQueryCounter: Int = 0
             var posts: [Post] = []
