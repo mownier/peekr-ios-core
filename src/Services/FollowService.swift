@@ -28,16 +28,15 @@ public func isFollowingUser(withID id: String, completion: @escaping (Result<Boo
         return
     }
     let db = Firestore.firestore()
-    let followingCollection = db.collection("following")
-    let currentUserDoc = followingCollection.document(userID)
-    currentUserDoc.getDocument { snapshot, error in
+    let listCollection = db.collection("following/\(userID)/list")
+    let listDoc = listCollection.document(id)
+    listDoc.getDocument { snapshot, error in
         guard error == nil else {
             completion(.notOkay(error!))
             return
         }
         guard let snapshot = snapshot,
-            snapshot.exists,
-            snapshot.get(id) != nil else {
+            snapshot.exists else {
                 completion(.okay(false))
                 return
         }
@@ -120,6 +119,81 @@ public func getMyFollowers(
     )
 }
 
+public func getListThatUserHasFollowed(
+    userID id: String,
+    startAfter lastID: String? = nil,
+    count: UInt = 10,
+    completion: @escaping (Result<[User]>) -> Void
+) {
+    guard let userID = Auth.auth().currentUser?.uid else {
+        completion(.notOkay(coreError(message: CoreStrings.userNotAuthenticated)))
+        return
+    }
+    guard !userID.isEmpty, !id.isEmpty else {
+        completion(.notOkay(coreError(message: CoreStrings.emptyUserID)))
+        return
+    }
+    let count = count > 0 ? count : 10
+    let db = Firestore.firestore()
+    let listCollection = db.collection("following/\(id)/list")
+    let query = listCollection.limit(to: Int(count))
+    let resultBlock: FIRQuerySnapshotBlock = { snapshot, error in
+        guard error == nil else {
+            completion(.notOkay(coreError(message: error!.localizedDescription)))
+            return
+        }
+        guard let snapshot = snapshot else {
+            completion(.notOkay(coreError(message: CoreStrings.dataNotFound)))
+            return
+        }
+        let listOfUserID = snapshot
+            .documents
+            .compactMap({ $0.data()["id"] as? String })
+        getUsers(withIDs: Set(listOfUserID)) { setOfUser in
+            let userIDAndIndex = listOfUserID.enumerated()
+            let orderedList = setOfUser.sorted { user1, user2 -> Bool in
+                let index1 = userIDAndIndex.first(where: { $0.element == user1.id })?.offset ?? -1
+                let index2 = userIDAndIndex.first(where: { $0.element == user2.id })?.offset ?? -1
+                return index1 < index2
+            }
+            completion(.okay(orderedList))
+        }
+    }
+    guard let lastID = lastID, !lastID.isEmpty else {
+        query.getDocuments { snapshot, error in
+            resultBlock(snapshot, error)
+        }
+        return
+    }
+    let listDoc = listCollection.document(lastID)
+    listDoc.getDocument { snapshot, error in
+        guard error == nil else {
+            completion(.notOkay(coreError(message: error!.localizedDescription)))
+            return
+        }
+        guard let snapshot = snapshot else {
+            completion(.notOkay(coreError(message: CoreStrings.dataNotFound)))
+            return
+        }
+        query.start(afterDocument: snapshot).getDocuments { snapshot, error in
+            resultBlock(snapshot, error)
+        }
+    }
+}
+
+public func getUsersIHaveFollowed(
+    startAfter lastUserID: String? = nil,
+    count: UInt = 10,
+    completion: @escaping (Result<[User]>) -> Void
+) {
+    getListThatUserHasFollowed(
+        userID: Auth.auth().currentUser?.uid ?? "",
+        startAfter: lastUserID,
+        count: count,
+        completion: completion
+    )
+}
+
 enum FollowUnfollowAction: Int {
     
     case follow = 1
@@ -146,6 +220,8 @@ func followOrUnfollowUser(
     let targetUserFollowersListCurrentUserDoc = targetUserFollowersListCollection.document(userID)
     let followingCollection = db.collection("following")
     let currentUserFollowingDoc = followingCollection.document(userID)
+    let currentUserFollowingListCollection = currentUserFollowingDoc.collection("list")
+    let currentUserFollowingListTargetUserDoc = currentUserFollowingListCollection.document(id)
     let userPublicInfoCollection = db.collection("user_public_info")
     let targetUserDoc = userPublicInfoCollection.document(id)
     let currentUserDoc = userPublicInfoCollection.document(userID)
@@ -170,17 +246,15 @@ func followOrUnfollowUser(
             : oldFollowingCount + action.rawValue
         transaction.updateData(["follower_count": newFollowerCount], forDocument: targetUserDoc)
         transaction.updateData(["following_count": newFollowingCount], forDocument: currentUserDoc)
-        let actionUpdateValue: Any
         switch action {
         case .unfollow:
-            actionUpdateValue = FieldValue.delete()
+            currentUserFollowingListTargetUserDoc.delete()
             targetUserFollowersListCurrentUserDoc.delete()
             
         case .follow:
-            actionUpdateValue = true
+            transaction.setData(["id": id], forDocument: currentUserFollowingListTargetUserDoc)
             transaction.setData(["id": userID], forDocument: targetUserFollowersListCurrentUserDoc)
         }
-        transaction.updateData([id: actionUpdateValue], forDocument: currentUserFollowingDoc)
         return nil
     }) { _, error in
         guard error == nil else {
