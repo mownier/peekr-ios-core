@@ -16,6 +16,7 @@ public enum CoreStrings {
     static let fileNotFound = "File not found".localized()
     static let downloadURLNotExisting = "Download URL does not exist".localized()
     static let broadcastInfoKey = "broadcast.info.key"
+    static let dataNotFound = "Data not found".localized()
 
     public static let ok = "OK".localized()
 }

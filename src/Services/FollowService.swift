@@ -45,6 +45,81 @@ public func isFollowingUser(withID id: String, completion: @escaping (Result<Boo
     }
 }
 
+public func getFollowersOfUser(
+    withID id: String,
+    startAfter lastID: String? = nil,
+    count: UInt = 10,
+    completion: @escaping (Result<[User]>) -> Void
+) {
+    guard let userID = Auth.auth().currentUser?.uid else {
+        completion(.notOkay(coreError(message: CoreStrings.userNotAuthenticated)))
+        return
+    }
+    guard !userID.isEmpty, !id.isEmpty else {
+        completion(.notOkay(coreError(message: CoreStrings.emptyUserID)))
+        return
+    }
+    let count = count > 0 ? count : 10
+    let db = Firestore.firestore()
+    let listCollection = db.collection("followers/\(id)/list")
+    let query = listCollection.limit(to: Int(count))
+    let resultBlock: FIRQuerySnapshotBlock = { snapshot, error in
+        guard error == nil else {
+            completion(.notOkay(coreError(message: error!.localizedDescription)))
+            return
+        }
+        guard let snapshot = snapshot else {
+            completion(.notOkay(coreError(message: CoreStrings.dataNotFound)))
+            return
+        }
+        let listOfUserID = snapshot
+            .documents
+            .compactMap({ $0.data()["id"] as? String })
+        getUsers(withIDs: Set(listOfUserID)) { setOfUser in
+            let userIDAndIndex = listOfUserID.enumerated()
+            let orderedList = setOfUser.sorted { user1, user2 -> Bool in
+                let index1 = userIDAndIndex.first(where: { $0.element == user1.id })?.offset ?? -1
+                let index2 = userIDAndIndex.first(where: { $0.element == user2.id })?.offset ?? -1
+                return index1 < index2
+            }
+            completion(.okay(orderedList))
+        }
+    }
+    guard let lastID = lastID, !lastID.isEmpty else {
+        query.getDocuments { snapshot, error in
+            resultBlock(snapshot, error)
+        }
+        return
+    }
+    let listDoc = listCollection.document(lastID)
+    listDoc.getDocument { snapshot, error in
+        guard error == nil else {
+            completion(.notOkay(coreError(message: error!.localizedDescription)))
+            return
+        }
+        guard let snapshot = snapshot else {
+            completion(.notOkay(coreError(message: CoreStrings.dataNotFound)))
+            return
+        }
+        query.start(afterDocument: snapshot).getDocuments { snapshot, error in
+            resultBlock(snapshot, error)
+        }
+    }
+}
+
+public func getMyFollowers(
+    startAfter userID: String? = nil,
+    count: UInt = 10,
+    completion: @escaping (Result<[User]>) -> Void
+) {
+    getFollowersOfUser(
+        withID: Auth.auth().currentUser?.uid ?? "",
+        startAfter: userID,
+        count: count,
+        completion: completion
+    )
+}
+
 enum FollowUnfollowAction: Int {
     
     case follow = 1
@@ -60,11 +135,15 @@ func followOrUnfollowUser(
         completion(.notOkay(coreError(message: CoreStrings.userNotAuthenticated)))
         return
     }
-    guard !id.isEmpty else {
+    guard !id.isEmpty, !userID.isEmpty else {
         completion(.notOkay(coreError(message: CoreStrings.emptyUserID)))
         return
     }
     let db = Firestore.firestore()
+    let followersCollection = db.collection("followers")
+    let targetUserFollowersDoc = followersCollection.document(id)
+    let targetUserFollowersListCollection = targetUserFollowersDoc.collection("list")
+    let targetUserFollowersListCurrentUserDoc = targetUserFollowersListCollection.document(userID)
     let followingCollection = db.collection("following")
     let currentUserFollowingDoc = followingCollection.document(userID)
     let userPublicInfoCollection = db.collection("user_public_info")
@@ -93,8 +172,13 @@ func followOrUnfollowUser(
         transaction.updateData(["following_count": newFollowingCount], forDocument: currentUserDoc)
         let actionUpdateValue: Any
         switch action {
-        case .unfollow: actionUpdateValue = FieldValue.delete()
-        case .follow: actionUpdateValue = true
+        case .unfollow:
+            actionUpdateValue = FieldValue.delete()
+            targetUserFollowersListCurrentUserDoc.delete()
+            
+        case .follow:
+            actionUpdateValue = true
+            transaction.setData(["id": userID], forDocument: targetUserFollowersListCurrentUserDoc)
         }
         transaction.updateData([id: actionUpdateValue], forDocument: currentUserFollowingDoc)
         return nil

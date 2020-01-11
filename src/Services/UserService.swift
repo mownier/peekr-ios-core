@@ -13,7 +13,7 @@ import FirebaseStorage
 import FirebaseFirestore
 
 public func getUsers(withIDs set: Set<String>, completion: @escaping (Set<User>) -> Void) {
-    guard Auth.auth().currentUser != nil else {
+    guard Auth.auth().currentUser != nil, !set.isEmpty else {
         completion([])
         return
     }
